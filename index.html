@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sistema de Vistas</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        #viewer-container {
+            width: 500px;
+            height: 500px;
+            border: 1px solid #ccc;
+            position: relative; /* Importante para posicionar el selector */
+        }
+        #drawing-container {
+            flex-grow: 1;
+        }
+        /* Estilo para el selector de modelos */
+        .model-selector {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .model-selector select {
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .model-selector label {
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="viewer-container"></div>
+        <div id="drawing-container"></div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="models.js"></script>
+    <script src="viewer.js"></script>
+    <script src="views.js"></script>
+    <script>
+        window.onload = function() {
+            init('viewer-container');
+            initDrawingSystem('drawing-container');
+            //createModelSelector();
+        };
+    </script>
+</body>
+</html>
