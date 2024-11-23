@@ -1,8 +1,96 @@
+// Variables globales de Three.js
 let scene, camera, renderer, controls;
 
+// Función de animación principal
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+// Función de cambio de vista
+function setView(position) {
+    camera.position.set(...position);
+    camera.lookAt(0, 0, 0);
+    camera.updateProjectionMatrix();
+    controls.update();
+}
+
+// Función principal de inicialización
 function init(containerId) {
-    // Contenedor
+    // Crear el contenedor principal con layout
+    const mainContainer = document.createElement('div');
+    mainContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        height: 100%;
+    `;
+
+    // Crear la barra de herramientas superior
+    const toolbarContainer = document.createElement('div');
+    toolbarContainer.style.cssText = `
+        display: flex;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        align-items: center;
+        justify-content: space-between;
+    `;
+
+    // Contenedor del visor 3D
+    const viewerContainer = document.createElement('div');
+    viewerContainer.style.cssText = `
+        flex: 1;
+        position: relative;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        overflow: hidden;
+        min-height: 500px;
+    `;
+
+    // Nuevo contenedor para los selectores de dificultad
+    const difficultyContainer = document.createElement('div');
+    difficultyContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    `;
+
+    // Mover los elementos existentes
     const container = document.getElementById(containerId);
+    container.style.height = '100%';
+    container.innerHTML = '';
+    container.appendChild(mainContainer);
+    
+    mainContainer.appendChild(toolbarContainer);
+    mainContainer.appendChild(viewerContainer);
+    mainContainer.appendChild(difficultyContainer);
+
+    // Inicializar Three.js con el nuevo contenedor
+    initThreeJS(viewerContainer);
+
+    // Crear los controles en la barra de herramientas
+    createViewerControls(toolbarContainer);
+
+    // Crear los selectores de dificultad en el nuevo contenedor
+    createModelSelector(difficultyContainer);
+
+    // Agregar el panel de ayuda al contenedor principal
+    createHelpPanel(mainContainer);
+}
+
+function initThreeJS(container) {
     const width = container.clientWidth;
     const height = container.clientHeight;
 
@@ -13,16 +101,17 @@ function init(containerId) {
     // Cámara Ortográfica
     const frustumSize = 10;
     const aspect = width / height;
+
     camera = new THREE.OrthographicCamera(
-        frustumSize * aspect / -2,
+        -frustumSize * aspect / 2,
         frustumSize * aspect / 2,
         frustumSize / 2,
-        frustumSize / -2,
-        1,
+        -frustumSize / 2,
+        0.1,
         1000
     );
     camera.position.set(5, 5, 5);
-    camera.zoom = 1;
+    camera.zoom = 0.8;
     camera.updateProjectionMatrix();
 
     // Renderer
@@ -40,7 +129,7 @@ function init(containerId) {
     controls.maxZoom = 4;
 
     // Luces
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -50,28 +139,25 @@ function init(containerId) {
     // Añadir rejillas de referencia
     addReferenceGrids();
 
-    // Manejo de redimensionamiento
-    window.addEventListener('resize', onWindowResize, false);
-
-    // Observer para el contenedor
-    const resizeObserver = new ResizeObserver(() => {
-        onWindowResize();
-    });
-    resizeObserver.observe(container);
-
-    // Hacer globales las variables necesarias
-    window.scene = scene;
-    window.camera = camera;
-    window.renderer = renderer;
-    window.controls = controls;
-
-    // Crear selector y cargar modelo inicial
-    setTimeout(() => {
-        createModelSelector();
-        loadModel('pieza1');
-    }, 100);
-
+    // Iniciar animación
     animate();
+
+    // Configurar el observer de redimensionamiento
+    const resizeObserver = new ResizeObserver(() => {
+        const newWidth = container.clientWidth;
+        const newHeight = container.clientHeight;
+        const newAspect = newWidth / newHeight;
+        
+        camera.left = -frustumSize * newAspect / 2;
+        camera.right = frustumSize * newAspect / 2;
+        camera.top = frustumSize / 2;
+        camera.bottom = -frustumSize / 2;
+        
+        camera.updateProjectionMatrix();
+        renderer.setSize(newWidth, newHeight);
+    });
+    
+    resizeObserver.observe(container);
 }
 
 function addReferenceGrids() {
@@ -166,9 +252,10 @@ function addReferenceGrids() {
     createLabel('Perfil', new THREE.Vector3(-size/2, size/2 + 1, 0));
 }
 
-function loadModel(modelId) {
-    if (!MODELS[modelId]) {
-        console.error('Modelo no encontrado:', modelId);
+// Función de carga de modelos
+function loadModel(difficulty, modelId) {
+    if (!MODELS[difficulty] || !MODELS[difficulty].models[modelId]) {
+        console.error('Modelo no encontrado:', difficulty, modelId);
         return;
     }
 
@@ -180,7 +267,7 @@ function loadModel(modelId) {
     });
 
     // Crear y añadir el nuevo modelo
-    const model = MODELS[modelId].createGeometry();
+    const model = MODELS[difficulty].models[modelId].createGeometry();
     scene.add(model);
 
     // Resetear cámara
@@ -189,36 +276,36 @@ function loadModel(modelId) {
     controls.reset();
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    controls.update();
-    updateMaterials();
-    renderer.render(scene, camera);
-}
-
-function updateMaterials() {
-    scene.traverse((object) => {
-        if (object.material && object.material.onBeforeCompile) {
-            object.material.needsUpdate = true;
-            if (object.material.userData.shader) {
-                object.material.userData.shader.uniforms.cameraPosition.value.copy(camera.position);
-            }
-        }
+// Función auxiliar para crear botones de acción
+function createActionButton(label, onClick) {
+    const button = document.createElement('button');
+    button.textContent = label;
+    button.style.cssText = `
+        padding: 8px;
+        background: #f0f0f0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        flex: 1;
+        transition: all 0.2s;
+    `;
+    
+    button.addEventListener('mouseover', () => {
+        button.style.background = '#e0e0e0';
     });
+    
+    button.addEventListener('mouseout', () => {
+        button.style.background = '#f0f0f0';
+    });
+    
+    button.addEventListener('click', onClick);
+    
+    return button;
 }
 
-function onWindowResize() {
-    const container = renderer.domElement.parentElement;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    const aspect = width / height;
-    const frustumSize = 10;
-    
-    camera.left = -frustumSize * aspect / 2;
-    camera.right = frustumSize * aspect / 2;
-    camera.top = frustumSize / 2;
-    camera.bottom = -frustumSize / 2;
-    
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
+function highlightActiveButton(container, activeButton) {
+    container.querySelectorAll('button').forEach(button => {
+        button.style.background = button === activeButton ? '#d0d0d0' : '#f0f0f0';
+    });
 }

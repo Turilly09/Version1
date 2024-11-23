@@ -8,7 +8,8 @@ let drawingContext = {
     gridSize: 40,
     snapThreshold: 10,
     tempLine: null,
-    margin: 25  // Añadimos un margen para los puntos del perímetro
+    margin: 25,  // Añadimos un margen para los puntos del perímetro
+    eraserRadius: 5  // Radio de detección para el borrador
 };
 
 function initDrawingSystem(containerId) {
@@ -21,6 +22,7 @@ function initDrawingSystem(containerId) {
         padding: 10px;
         background-color: #f5f5f5;
         border: 1px solid #ccc;
+        align-items: left;
     `;
 
     // Crear barra de herramientas superior
@@ -77,6 +79,14 @@ function createTopToolbar() {
             icon: '┄',
             title: 'Línea Discontinua',
             onClick: () => setLineStyle('dashed')
+        },
+        {
+            id: 'eraser',
+            icon: '⌫',
+            title: 'Borrador',
+            onClick: () => {
+                drawingContext.currentTool = 'eraser';
+            }
         }
     ]);
     toolbar.appendChild(lineTypeGroup);
@@ -144,6 +154,7 @@ function createButtonGroup(buttons) {
         const btn = document.createElement('button');
         btn.textContent = button.icon;
         btn.title = button.title;
+        btn.dataset.tool = button.id; // Añadimos un identificador de herramienta
         btn.style.cssText = `
             padding: 8px 12px;
             font-size: 16px;
@@ -163,10 +174,13 @@ function createButtonGroup(buttons) {
         });
 
         btn.addEventListener('mouseleave', () => {
-            btn.style.background = 'white';
+            if (drawingContext.currentTool !== button.id) {
+                btn.style.background = 'white';
+            }
         });
 
         btn.addEventListener('click', () => {
+            drawingContext.currentTool = button.id;
             button.onClick();
             updateButtonSelection(group, btn);
         });
@@ -495,56 +509,169 @@ function redrawCanvas(canvas) {
     }
 }
 
+// Función para calcular la distancia de un punto a una línea
+function distanceToLine(point, line) {
+    const { x, y } = point;
+    const { startX, startY, endX, endY } = line;
+    
+    // Calcular la distancia usando la fórmula de distancia punto-línea
+    const numerator = Math.abs(
+        (endY - startY) * x -
+        (endX - startX) * y +
+        endX * startY -
+        endY * startX
+    );
+    
+    const denominator = Math.sqrt(
+        Math.pow(endY - startY, 2) +
+        Math.pow(endX - startX, 2)
+    );
+    
+    // Verificar si el punto está dentro del segmento de línea
+    const dotProduct = 
+        ((x - startX) * (endX - startX) +
+        (y - startY) * (endY - startY)) /
+        (Math.pow(denominator, 2));
+        
+    if (dotProduct < 0 || dotProduct > 1) {
+        return Infinity;
+    }
+    
+    return numerator / denominator;
+}
+
+
 function setupCanvasDrawing(canvas) {
-    canvas.addEventListener('mousedown', (e) => {
+    function handleMouseDown(e) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        const snappedPoint = snapToGrid(x, y);
 
-        if (snappedPoint) {
-            drawingContext.isDrawing = true;
-            drawingContext.activeCanvas = canvas;
-            drawingContext.startX = snappedPoint.x;
-            drawingContext.startY = snappedPoint.y;
+        if (drawingContext.currentTool === 'line') {
+            const snappedPoint = snapToGrid(x, y);
+            if (snappedPoint) {
+                drawingContext.isDrawing = true;
+                drawingContext.activeCanvas = canvas;
+                drawingContext.startX = snappedPoint.x;
+                drawingContext.startY = snappedPoint.y;
+            }
+        } else if (drawingContext.currentTool === 'eraser') {
+            eraseLine(canvas, x, y);
         }
-    });
+    }
 
-    canvas.addEventListener('mousemove', (e) => {
+    function handleMouseMove(e) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        const snappedPoint = snapToGrid(x, y);
 
-        if (drawingContext.isDrawing && snappedPoint) {
-            drawingContext.tempLine = {
-                startX: drawingContext.startX,
-                startY: drawingContext.startY,
-                endX: snappedPoint.x,
-                endY: snappedPoint.y,
-                style: drawingContext.lineStyle
-            };
-            redrawCanvas(canvas);
+        if (drawingContext.currentTool === 'line' && drawingContext.isDrawing) {
+            const snappedPoint = snapToGrid(x, y);
+            if (snappedPoint) {
+                drawingContext.tempLine = {
+                    startX: drawingContext.startX,
+                    startY: drawingContext.startY,
+                    endX: snappedPoint.x,
+                    endY: snappedPoint.y,
+                    style: drawingContext.lineStyle
+                };
+                redrawCanvas(canvas);
+            }
+        } else if (drawingContext.currentTool === 'eraser') {
+            highlightNearestLine(canvas, x, y);
         }
-    });
+    }
 
-    canvas.addEventListener('mouseup', (e) => {
+    function handleMouseUp() {
         if (drawingContext.isDrawing && drawingContext.tempLine) {
+            if (!canvas.savedLines) {
+                canvas.savedLines = [];
+            }
             canvas.savedLines.push({...drawingContext.tempLine});
             drawingContext.tempLine = null;
             drawingContext.isDrawing = false;
             redrawCanvas(canvas);
         }
-    });
+    }
 
-    canvas.addEventListener('mouseout', () => {
+    function handleMouseOut() {
         if (drawingContext.isDrawing) {
             drawingContext.tempLine = null;
             drawingContext.isDrawing = false;
             redrawCanvas(canvas);
         }
-    });
+    }
+
+    // Eliminar event listeners existentes si los hay
+    canvas.removeEventListener('mousedown', handleMouseDown);
+    canvas.removeEventListener('mousemove', handleMouseMove);
+    canvas.removeEventListener('mouseup', handleMouseUp);
+    canvas.removeEventListener('mouseout', handleMouseOut);
+
+    // Agregar nuevos event listeners
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseout', handleMouseOut);
 }
+
+function setLineStyle(style) {
+    drawingContext.lineStyle = style;
+    drawingContext.currentTool = 'line'; // Asegurarse de que estamos en modo línea
+}
+
+
+// Función para borrar una línea
+function eraseLine(canvas, x, y) {
+    if (!canvas.savedLines) return;
+    
+    let minDistance = drawingContext.eraserRadius;
+    let lineToRemove = -1;
+
+    canvas.savedLines.forEach((line, index) => {
+        const distance = distanceToLine({x, y}, line);
+        if (distance < minDistance) {
+            minDistance = distance;
+            lineToRemove = index;
+        }
+    });
+
+    if (lineToRemove !== -1) {
+        canvas.savedLines.splice(lineToRemove, 1);
+        redrawCanvas(canvas);
+    }
+}
+
+// Función para resaltar la línea más cercana al cursor en modo borrador
+function highlightNearestLine(canvas, x, y) {
+    if (!canvas.savedLines) return;
+    
+    const ctx = canvas.getContext('2d');
+    redrawCanvas(canvas); // Redibujar sin resaltado
+    
+    let minDistance = drawingContext.eraserRadius;
+    let nearestLine = null;
+
+    canvas.savedLines.forEach(line => {
+        const distance = distanceToLine({x, y}, line);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestLine = line;
+        }
+    });
+
+    // Resaltar la línea más cercana
+    if (nearestLine) {
+        ctx.beginPath();
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([]);
+        ctx.moveTo(nearestLine.startX, nearestLine.startY);
+        ctx.lineTo(nearestLine.endX, nearestLine.endY);
+        ctx.stroke();
+    }
+}
+
 
 function setActiveTool(toolId) {
     if (toolId === 'dashed') {
@@ -561,6 +688,19 @@ function setActiveTool(toolId) {
 function updateToolbarSelection(toolbar, activeButton) {
     toolbar.querySelectorAll('button').forEach(button => {
         button.style.background = button === activeButton ? '#ddd' : 'white';
+    });
+}
+
+function updateButtonSelection(group, activeButton) {
+    group.querySelectorAll('button').forEach(button => {
+        const isActive = button === activeButton;
+        button.style.background = isActive ? '#e0e0e0' : 'white';
+        
+        // Actualizar el estilo del cursor del canvas según la herramienta
+        const canvases = document.querySelectorAll('.view-container canvas');
+        canvases.forEach(canvas => {
+            canvas.style.cursor = drawingContext.currentTool === 'eraser' ? 'crosshair' : 'default';
+        });
     });
 }
 
