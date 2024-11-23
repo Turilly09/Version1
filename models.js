@@ -440,6 +440,7 @@ const MODELS = {
             
                     // Ahora sí, aplicamos createOrientedMesh al grupo completo
                     return createOrientedMesh(group);
+                    // Pues no funciona... La madre que lo parió...
                 }
             },
 
