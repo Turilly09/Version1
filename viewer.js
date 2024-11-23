@@ -38,9 +38,9 @@ function init(containerId) {
         padding: 10px;
         background: white;
         border: 1px solid #ccc;
-        border-radius: 4px;
+        border-radius: 10px;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
     `;
 
     // Contenedor del visor 3D
@@ -50,7 +50,7 @@ function init(containerId) {
         position: relative;
         background: white;
         border: 1px solid #ccc;
-        border-radius: 4px;
+        border-radius: 10px;
         overflow: hidden;
         min-height: 500px;
     `;
@@ -64,7 +64,8 @@ function init(containerId) {
         padding: 10px;
         background: white;
         border: 1px solid #ccc;
-        border-radius: 4px;
+        border-radius: 10px;
+        max-height: 200px;
     `;
 
     // Mover los elementos existentes

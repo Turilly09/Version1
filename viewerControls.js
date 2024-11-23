@@ -2,13 +2,13 @@ function createViewerControls(container) {
     const controlsDiv = document.createElement('div');
     controlsDiv.style.cssText = `
         display: flex;
-        gap: 5px;
+        gap: 5px; 
     `;
 
     const views = [
-        { id: 'front', label: 'Alz', position: [0, 0, 20] },
-        { id: 'top', label: 'Pla', position: [0, 20, 0] },
-        { id: 'side', label: 'Perf', position: [20, 0, 0] }
+        { id: 'front', label: 'Alzado', position: [0, 0, 20] },
+        { id: 'top', label: 'Planta', position: [0, 20, 0] },
+        { id: 'side', label: 'Perfil', position: [20, 0, 0] }
     ];
 
     views.forEach(view => {
@@ -20,10 +20,10 @@ function createViewerControls(container) {
             border: 1px solid #ccc;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 12px;
             transition: all 0.2s;
             min-width: 30px;
-            max-height: 30px;
+            max-height: 50px;
         `;
         
         button.addEventListener('mouseover', () => {
@@ -57,129 +57,6 @@ function createViewerControls(container) {
     controlsDiv.appendChild(helpButton);
 
     container.appendChild(controlsDiv);
-}
-
-function updateModelSelector(container, difficulty) {
-    container.innerHTML = '';
-    
-    const selectContainer = document.createElement('div');
-    selectContainer.style.cssText = `
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-    `;
-
-    const label = document.createElement('label');
-    label.textContent = 'Modelo:';
-    label.style.cssText = `
-        font-size: 14px;
-        color: #666;
-    `;
-
-    const select = document.createElement('select');
-    select.style.cssText = `
-        padding: 8px;
-        font-size: 14px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background: white;
-        min-width: 200px;
-        cursor: pointer;
-    `;
-
-    const models = MODELS[difficulty].models;
-    Object.keys(models).forEach(modelId => {
-        const option = document.createElement('option');
-        option.value = modelId;
-        option.textContent = models[modelId].name;
-        select.appendChild(option);
-    });
-
-    select.addEventListener('change', () => {
-        loadModel(difficulty, select.value);
-    });
-
-    selectContainer.appendChild(label);
-    selectContainer.appendChild(select);
-    container.appendChild(selectContainer);
-
-    // Cargar el primer modelo
-    loadModel(difficulty, select.value);
-}
-
-function createModelSelector(container) {
-    const selectorContainer = document.createElement('div');
-    selectorContainer.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    `;
-
-    // Título para la sección
-    const title = document.createElement('h3');
-    title.textContent = 'Selección de Modelos';
-    title.style.cssText = `
-        margin: 0;
-        font-size: 16px;
-        color: #333;
-        text-align: center;
-    `;
-    selectorContainer.appendChild(title);
-
-    // Contenedor para botones de dificultad
-    const difficultyContainer = document.createElement('div');
-    difficultyContainer.style.cssText = `
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-    `;
-
-    // Etiqueta para el nivel de dificultad
-    const difficultyLabel = document.createElement('div');
-    difficultyLabel.textContent = 'Nivel de dificultad:';
-    difficultyLabel.style.cssText = `
-        font-size: 14px;
-        color: #666;
-        margin-bottom: 5px;
-        text-align: center;
-    `;
-    selectorContainer.appendChild(difficultyLabel);
-
-    // Contenedor para selector de modelos
-    const modelSelectContainer = document.createElement('div');
-    modelSelectContainer.style.cssText = `
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        justify-content: center;
-        flex-wrap: wrap;
-    `;
-
-    // Crear botones de dificultad
-    Object.keys(MODELS).forEach(difficulty => {
-        const button = createActionButton(MODELS[difficulty].title, () => {
-            highlightActiveButton(difficultyContainer, button);
-            updateModelSelector(modelSelectContainer, difficulty);
-        });
-        button.style.cssText += `
-            padding: 10px 20px;
-            font-size: 14px;
-            flex: 1;
-            max-width: 150px;
-        `;
-        difficultyContainer.appendChild(button);
-    });
-
-    selectorContainer.appendChild(difficultyContainer);
-    selectorContainer.appendChild(modelSelectContainer);
-    container.appendChild(selectorContainer);
-
-    // Inicializar con la primera dificultad
-    const firstDifficulty = Object.keys(MODELS)[0];
-    updateModelSelector(modelSelectContainer, firstDifficulty);
-    highlightActiveButton(difficultyContainer, difficultyContainer.firstChild);
 }
 
 function updateModelSelector(container, difficulty) {
@@ -240,7 +117,7 @@ function createModelSelector(container) {
     selectorContainer.style.cssText = `
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 11px;
     `;
 
     // Título para la sección
@@ -307,6 +184,7 @@ function createModelSelector(container) {
     updateModelSelector(modelSelectContainer, firstDifficulty);
     highlightActiveButton(difficultyContainer, difficultyContainer.firstChild);
 }
+
 function createHelpPanel(container) {
     const helpPanel = document.createElement('div');
     helpPanel.id = 'help-panel';
